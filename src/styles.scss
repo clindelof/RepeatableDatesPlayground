@@ -1,0 +1,15 @@
+:root {
+  --canvas: #f8f6f0;
+  --paper: #fffdf8;
+  --ink: #24251f;
+  --muted: #747268;
+  --line: #dcd7ca;
+  --accent: #de704a;
+  --accent-dark: #a9472d;
+  --serif: Georgia, 'Times New Roman', serif;
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+html { background: var(--canvas); color: var(--ink); scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; }
+::selection { background: #f0bba7; }

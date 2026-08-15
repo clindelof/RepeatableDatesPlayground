@@ -1,0 +1,141 @@
+<header class="site-header">
+  <a class="brand" href="./" aria-label="Repeatable Dates Playground home">
+    <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span><strong>Repeatable Dates</strong><small>Interactive Playground</small></span>
+  </a>
+  <nav class="header-actions" aria-label="Playground actions">
+    <button type="button" (click)="share()">Share setup</button>
+    <button type="button" (click)="exportConfig()">Export JSON</button>
+    <label class="file-action">Import JSON<input type="file" accept="application/json,.json" (change)="importConfig($event)" /></label>
+    <a href="https://github.com/clindelof/RepeatableDates" target="_blank" rel="noreferrer">Python library ↗</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Explore calendar recurrence without installing anything</p>
+      <h1>Make recurring dates<br /><em>explain themselves.</em></h1>
+      <p class="hero-copy">Configure a rule, see every adjustment, and copy production-ready Python for the dependency-free Repeatable Dates library.</p>
+    </div>
+    <div class="scenario-strip" aria-label="Example scenarios">
+      <p>Start with a scenario</p>
+      <button *ngFor="let scenario of scenarios" type="button" (click)="loadScenario(scenario)" [title]="scenario.description">
+        {{ scenario.name }}<span>→</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="playground">
+    <aside class="config-panel">
+      <div class="panel-heading">
+        <div><span>01</span><h2>Define the rule</h2></div>
+        <button type="button" class="text-button" (click)="reset()">Reset</button>
+      </div>
+
+      <label class="field"><span>Schedule name</span><input [(ngModel)]="config.name" /></label>
+      <div class="field">
+        <span>Recurrence type</span>
+        <div class="rule-grid">
+          <button *ngFor="let rule of ruleKinds" type="button" [class.selected]="config.kind === rule.value" (click)="config.kind = rule.value">
+            <strong>{{ rule.label }}</strong><small>{{ rule.detail }}</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label class="field"><span>{{ config.kind === 'once' ? 'Occurrence date' : 'Schedule starts' }}</span><input type="date" [(ngModel)]="config.start" /></label>
+        <label class="field" *ngIf="config.kind !== 'once'"><span>Repeat every</span><span class="number-suffix"><input type="number" min="1" max="99" [(ngModel)]="config.every" /><b>{{ config.kind === 'weekly' ? 'week(s)' : config.kind === 'yearly' ? 'year(s)' : 'month(s)' }}</b></span></label>
+      </div>
+
+      <div class="field" *ngIf="config.kind === 'weekly'">
+        <span>Occurs on</span>
+        <div class="choice-row"><button *ngFor="let day of weekdays; index as index" type="button" [class.selected]="isSelected('weekdays', index)" (click)="toggleNumber('weekdays', index)">{{ day }}</button></div>
+      </div>
+
+      <div class="field" *ngIf="config.kind === 'monthly' || config.kind === 'yearly'">
+        <span>Calendar days</span>
+        <input [ngModel]="config.monthDays.join(', ')" (ngModelChange)="updateMonthDays($event)" placeholder="1, 15, 31" />
+        <small>Comma-separated days from 1 through 31.</small>
+      </div>
+
+      <div class="field" *ngIf="config.kind === 'yearly'">
+        <span>Selected months</span>
+        <div class="month-grid"><button *ngFor="let month of months; index as index" type="button" [class.selected]="isSelected('months', index + 1)" (click)="toggleNumber('months', index + 1)">{{ month }}</button></div>
+      </div>
+
+      <div class="field-row" *ngIf="config.kind === 'monthly_weekday'">
+        <label class="field"><span>Occurrence</span><select [(ngModel)]="config.ordinal"><option [ngValue]="1">First</option><option [ngValue]="2">Second</option><option [ngValue]="3">Third</option><option [ngValue]="4">Fourth</option><option [ngValue]="5">Fifth</option><option [ngValue]="-1">Last</option></select></label>
+        <label class="field"><span>Weekday</span><select [(ngModel)]="config.ordinalWeekday"><option *ngFor="let day of weekdays; index as index" [ngValue]="index">{{ day }}</option></select></label>
+      </div>
+
+      <label class="field" *ngIf="config.kind === 'monthly' || config.kind === 'yearly'"><span>Invalid dates</span><select [(ngModel)]="config.overflow"><option value="clamp">Clamp to month end</option><option value="skip">Skip that occurrence</option></select></label>
+
+      <details>
+        <summary>Schedule limits <span>Optional</span></summary>
+        <div class="field-row details-content">
+          <label class="field"><span>Inclusive end date</span><input type="date" [(ngModel)]="config.until" /></label>
+          <label class="field"><span>Maximum occurrences</span><input type="number" min="1" [(ngModel)]="config.count" placeholder="Unlimited" /></label>
+        </div>
+      </details>
+    </aside>
+
+    <section class="results-panel">
+      <div class="panel-heading results-heading">
+        <div><span>02</span><div><h2>Inspect the output</h2><p>{{ occurrenceSummary }}</p></div></div>
+        <div class="status" [class.error]="result.error"><i></i>{{ result.error ? 'Needs attention' : 'Rule is valid' }}</div>
+      </div>
+
+      <div class="view-tabs" role="tablist">
+        <button type="button" [class.selected]="activeView === 'calendar'" (click)="activeView = 'calendar'">Calendar</button>
+        <button type="button" [class.selected]="activeView === 'timeline'" (click)="activeView = 'timeline'">Timeline</button>
+        <button type="button" [class.selected]="activeView === 'python'" (click)="activeView = 'python'">Python</button>
+        <button type="button" [class.selected]="activeView === 'json'" (click)="activeView = 'json'">Schedule JSON</button>
+      </div>
+
+      <div class="error-banner" *ngIf="result.error">{{ result.error }}</div>
+
+      <section class="calendar-view" *ngIf="activeView === 'calendar'">
+        <div class="calendar-nav"><button type="button" (click)="changeCalendarMonth(-1)" aria-label="Previous month">←</button><h3>{{ calendarTitle }}</h3><button type="button" (click)="changeCalendarMonth(1)" aria-label="Next month">→</button></div>
+        <div class="calendar-grid calendar-weekdays"><span *ngFor="let day of weekdays">{{ day }}</span></div>
+        <div class="calendar-grid calendar-days">
+          <article *ngFor="let cell of calendarCells" [class.blank]="!cell.day" [class.occurrence]="cell.occurrences" [class.adjusted]="cell.adjusted" [class.included]="cell.included" [class.holiday]="cell.holiday">
+            <span>{{ cell.day }}</span><b *ngIf="cell.occurrences">{{ cell.occurrences > 1 ? cell.occurrences : 'Occurs' }}</b><small *ngIf="cell.holiday">Holiday</small>
+          </article>
+        </div>
+        <div class="legend"><span><i class="occurrence-dot"></i>Occurrence</span><span><i class="adjusted-dot"></i>Adjusted</span><span><i class="included-dot"></i>Included</span><span><i class="holiday-dot"></i>Holiday</span></div>
+      </section>
+
+      <section class="timeline-view" *ngIf="activeView === 'timeline'">
+        <article *ngFor="let item of result.occurrences; index as index; trackBy: trackDate">
+          <time><span>{{ item.date | date:'MMM':'UTC' }}</span><strong>{{ item.date | date:'dd':'UTC' }}</strong><small>{{ item.date | date:'yyyy':'UTC' }}</small></time>
+          <div><p>Occurrence {{ index + 1 }}</p><h3>{{ item.date | date:'EEEE, MMMM d, y':'UTC' }}</h3><span>{{ item.adjustment }}</span></div>
+          <div class="badges"><b *ngIf="item.source === 'included'">Included</b><b *ngIf="item.original !== item.date">Adjusted</b><b *ngIf="item.collision">Collision</b></div>
+        </article>
+        <div class="empty-state" *ngIf="!result.occurrences.length"><strong>No dates in this range</strong><span>Adjust the rule or query range to generate occurrences.</span></div>
+      </section>
+
+      <section class="code-view" *ngIf="activeView === 'python'"><div><span>repeatable_dates_example.py</span><button type="button" (click)="copyPython()">Copy</button></div><pre><code>{{ python }}</code></pre></section>
+      <section class="code-view" *ngIf="activeView === 'json'"><div><span>schedule.to_dict()</span></div><pre><code>{{ scheduleJson }}</code></pre></section>
+    </section>
+
+    <aside class="policy-panel">
+      <div class="panel-heading"><div><span>03</span><h2>Apply policies</h2></div></div>
+      <label class="field"><span>Business-day adjustment</span><select [(ngModel)]="config.adjustment"><option value="none">No adjustment</option><option value="previous_weekday">Previous weekday</option><option value="next_weekday">Next weekday</option><option value="nearest_weekday">Nearest weekday</option></select></label>
+      <div class="field"><span>Non-working weekdays</span><div class="choice-row compact"><button *ngFor="let day of weekdays; index as index" type="button" [class.selected]="isSelected('weekend', index)" (click)="toggleNumber('weekend', index)">{{ day.slice(0, 1) }}</button></div></div>
+      <label class="field"><span>Custom holidays</span><textarea rows="4" [(ngModel)]="holidayText" (ngModelChange)="syncDateLists()" placeholder="{{ currentYear }}-07-03&#10;{{ currentYear }}-12-25"></textarea><small>One ISO date per line.</small></label>
+      <label class="field"><span>Collision handling</span><select [(ngModel)]="config.collision"><option value="keep">Keep duplicates</option><option value="deduplicate">Deduplicate</option><option value="error">Raise an error</option></select></label>
+      <details>
+        <summary>Exceptions <span>{{ config.include.length + config.exclude.length || 'Optional' }}</span></summary>
+        <div class="details-content stack"><label class="field"><span>Include dates</span><textarea rows="3" [(ngModel)]="includeText" (ngModelChange)="syncDateLists()"></textarea></label><label class="field"><span>Exclude final dates</span><textarea rows="3" [(ngModel)]="excludeText" (ngModelChange)="syncDateLists()"></textarea></label></div>
+      </details>
+      <div class="field-row"><label class="field"><span>Query begins</span><input type="date" [(ngModel)]="config.rangeStart" (ngModelChange)="calendarMonth = $event.slice(0, 7)" /></label><label class="field"><span>Query ends <em>exclusive</em></span><input type="date" [(ngModel)]="config.rangeEnd" /></label></div>
+      <div class="metrics"><div><strong>{{ result.rawCount }}</strong><span>raw dates</span></div><div><strong>{{ result.excludedCount }}</strong><span>excluded</span></div><div><strong>{{ result.collisionCount }}</strong><span>collisions</span></div></div>
+    </aside>
+  </section>
+
+  <section class="principles"><article><span>Local-first</span><h3>Your schedule never leaves the browser.</h3><p>No account, analytics, backend, or external date service.</p></article><article><span>Library-aligned</span><h3>Generated code matches the Python API.</h3><p>The playground mirrors Repeatable Dates 0.3 semantics.</p></article><article><span>Explicit</span><h3>Every changed date shows its reason.</h3><p>Original dates, adjustments, collisions, and exceptions remain visible.</p></article></section>
+</main>
+
+<footer><span>Repeatable Dates Playground</span><p>Built to make recurrence rules understandable.</p><a href="https://github.com/clindelof/RepeatableDatesPlayground">View source ↗</a></footer>
+<div class="toast" *ngIf="toast">{{ toast }}</div>
