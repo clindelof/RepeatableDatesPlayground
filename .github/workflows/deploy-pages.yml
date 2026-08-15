@@ -27,7 +27,7 @@ jobs:
       - run: npm test -- --watch=false --browsers=ChromeHeadless
       - run: npm run build -- --base-href /RepeatableDatesPlayground/
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist/RepeatableDatesPlayground/browser
 
